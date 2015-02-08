@@ -8,20 +8,24 @@ class NestView extends Ui.View {
     function onShow() {
     }
 
-    function drawHashMarks(dc) {
-        var width = dc.getWidth();
-        var height = dc.getHeight();
-        var coords = [ 0, width / 4, (3 * width) / 4, width ];
+    function drawHashMarks(dc, currentTemp) {
+        var radius = dc.getWidth() / 2;
+        var numTicks = 50;
+        var tickInterval = (2 * Math.PI - (4 * Math.PI / 12)) / numTicks;
 
-        Sys.println("drawHashMarks: " + coords[1]);
+        var cx = dc.getWidth() / 2;
+        var cy = dc.getHeight() / 2;
+        var lengthMultiplier = 7.0 / 8.0;
+        for (var i = 0; i < numTicks / 2; i++) {
+            dc.setPenWidth(2);
 
-        for (var i = 0; i < coords.size(); i++) {
-            var dx = ((width / 2.0) - coords[i]) / (height / 2.0);
-            var upperX = coords[i] + (dx * 10);
-            // Draw the upper hash marks
-            dc.fillPolygon([ [coords[i] - 1, 2], [upperX - 1, 12], [upperX + 1, 12], [coords[i] + 1, 2] ]);
-            // Draw the lower hash marks
-            dc.fillPolygon([ [coords[i] - 1, height-2], [upperX - 1, height - 12], [upperX + 1, height - 12], [coords[i] + 1, height - 2]]);
+            var dx = radius * Math.cos(Math.PI / 2 + tickInterval * i);
+            var dy = radius * Math.sin(Math.PI / 2 + tickInterval * i);
+            dc.drawLine(cx - lengthMultiplier * dx, cy - lengthMultiplier * dy, cx - dx, cy - dy);
+
+            dx = radius * Math.cos(Math.PI / 2 - tickInterval * i);
+            dy = radius * Math.sin(Math.PI / 2 - tickInterval * i);
+            dc.drawLine(cx - lengthMultiplier * dx, cy - lengthMultiplier * dy, cx - dx, cy - dy);
         }
     }
 
@@ -44,13 +48,13 @@ class NestView extends Ui.View {
                 Gfx.FONT_LARGE, "AWAY", Gfx.TEXT_JUSTIFY_CENTER);
         } else {
             dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 4,
-                Gfx.FONT_NUMBER_THAI_HOT, "" + NestApi.getLastKnownTemp(), Gfx.TEXT_JUSTIFY_CENTER);
+                Gfx.FONT_NUMBER_THAI_HOT, "" + NestApi.getTargetTemp(), Gfx.TEXT_JUSTIFY_CENTER);
             dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 3,
                 Gfx.FONT_SMALL, mode.toUpper() + " SET TO", Gfx.TEXT_JUSTIFY_CENTER);
         }
 
         // Draw the hash marks
-        drawHashMarks(dc);
+        drawHashMarks(dc, NestApi.getCurrentTemp());
     }
 
     //! Called when this View is removed from the screen. Save the

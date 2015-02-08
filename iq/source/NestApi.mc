@@ -2,16 +2,23 @@ using Toybox.Application as App;
 
 enum
 {
-    LAST_KNOWN_TEMP,
+    TARGET_TEMP,
+    CURRENT_TEMP,
     IS_CURRENTLY_AWAY,
     HVAC_MODE
 }
 
 class NestApi {
-    static function getLastKnownTemp() {
+    static function getTargetTemp() {
         var app = App.getApp();
-        var lastTemp = app.getProperty(LAST_KNOWN_TEMP);
-        return (lastTemp == null) ? 0 : lastTemp;
+        var temp = app.getProperty(TARGET_TEMP);
+        return (temp == null) ? 0 : temp;
+    }
+
+    static function getCurrentTemp() {
+        var app = App.getApp();
+        var temp = app.getProperty(CURRENT_TEMP);
+        return (temp == null) ? 0 : temp;
     }
 
     static function isCurrentlyAway() {
