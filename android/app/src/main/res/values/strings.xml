@@ -19,4 +19,15 @@ limitations under the License.
     <string name="away_state_home">Home</string>
     <string name="away_state_away">Away</string>
     <string name="away_state_auto_away">Auto Away</string>
+
+
+    <!-- Override for auto UI dialogs. These are the default messages used by the SDK if you do not specify them in your own strings.xml file. -->
+    <string name="upgrade_needed_title">Upgrade Needed</string>
+    <string name="upgrade_needed_message">An upgrade to Garmin Connect Mobile is required to use this application. Would you like to upgrade now?</string>
+    <string name="upgrade_cancel">Cancel</string>
+    <string name="upgrade_yes">Upgrade</string>
+    <string name="install_needed_title">Additional App Required</string>
+    <string name="install_needed_message">Garmin Connect Mobile is required to use this application. Would you like to install it now?</string>
+    <string name="install_cancel">Cancel</string>
+    <string name="install_yes">Yes</string>
 </resources>
