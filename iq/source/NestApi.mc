@@ -53,13 +53,13 @@ class NestApi {
     static function setTargetTemperature(target) {
         if ((target > 50) && (target < 90)) {
             var listener = new CommListener();
-            Comm.transmit("{\"targetTemperature\": " + target + "}", null, listener);
+            Comm.transmit("targetTemperature==" + target, null, listener);
         }
     }
 
     static function setAwayStatus(status) {
         var listener = new CommListener();
-        Comm.transmit("{\"awayStatus\": " + target + "}", null, listener);
+        Comm.transmit("awayStatus==" + status, null, listener);
     }
 }
 
