@@ -2,6 +2,36 @@ using Toybox.Graphics as Gfx;
 using Toybox.System as Sys;
 using Toybox.WatchUi as Ui;
 
+class NestDelegate extends Ui.InputDelegate {
+    function onKey(evt) {
+        var mode = NestApi.getHvacMode();
+
+        if ("off".equals(mode)) {
+            // If the system is off, don't handle any input
+            // TODO: maybe allow to turn on
+            return;
+        } else if (NestApi.isCurrentlyAway()) {
+            // If we are away, look for the ENTER key
+            if (evt.getKey() == Ui.KEY_ENTER) {
+                NestApi.setAwayStatus(false);
+            }
+        } else {
+            // In any other case, look for:
+            //  -the enter key to enable away mode
+            //  -the up/down key to change target temperature
+            if (evt.getKey() == Ui.KEY_ENTER) {
+                NestApi.setAwayStatus(true);
+            } else if (evt.getKey() == Ui.KEY_UP) {
+                NestApi.setTargetTemperature(NestApi.getTargetTemp() + 1);
+            } else if (evt.getKey() == Ui.KEY_DOWN) {
+                NestApi.setTargetTemperature(NestApi.getTargetTemp() - 1);
+            }
+        }
+
+        Ui.requestUpdate();
+    }
+}
+
 class NestView extends Ui.View {
 
     //! Restore the state of the app and prepare the view to be shown

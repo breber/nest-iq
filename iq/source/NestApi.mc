@@ -1,4 +1,5 @@
 using Toybox.Application as App;
+using Toybox.Communications as Comm;
 
 enum
 {
@@ -9,6 +10,22 @@ enum
 }
 
 class NestApi {
+    function initialize() {
+        Comm.setMailboxListener(method(:onMail));
+    }
+
+    function onMail(mailIter) {
+        var mail = mailIter.next();
+
+        while (mail != null) {
+            // TODO: do something with the mail
+            mail = mailIter.next();
+        }
+
+        Comm.emptyMailbox();
+        Ui.requestUpdate();
+    }
+
     static function getTargetTemp() {
         var app = App.getApp();
         var temp = app.getProperty(TARGET_TEMP);
@@ -31,5 +48,27 @@ class NestApi {
         var app = App.getApp();
         var mode = app.getProperty(HVAC_MODE);
         return (mode == null) ? "heat" : mode;
+    }
+
+    static function setTargetTemperature(target) {
+        if ((target > 50) && (target < 90)) {
+            var listener = new CommListener();
+            Comm.transmit("{\"targetTemperature\": " + target + "}", null, listener);
+        }
+    }
+
+    static function setAwayStatus(status) {
+        var listener = new CommListener();
+        Comm.transmit("{\"awayStatus\": " + target + "}", null, listener);
+    }
+}
+
+class CommListener extends Comm.ConnectionListener {
+    function onComplete() {
+        Sys.println( "Transmit Complete" );
+    }
+
+    function onError() {
+        Sys.println( "Transmit Failed" );
     }
 }

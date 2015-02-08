@@ -12,7 +12,7 @@ class NestApp extends App.AppBase {
 
     //! Return the initial view of your application here
     function getInitialView() {
-        return [ new NestView() ];
+        return [ new NestView(), new NestDelegate() ];
     }
 
 }
