@@ -1,6 +1,7 @@
 using Toybox.Application as App;
 using Toybox.Communications as Comm;
 using Toybox.System as Sys;
+using Toybox.WatchUi as Ui;
 
 enum
 {
@@ -11,8 +12,17 @@ enum
     HVAC_MODE
 }
 
+class PopViewDelegate extends Ui.InputDelegate {
+    function onKey(evt) {
+        // Pop the view. If we are unauthenticated, we will
+        // push the view again
+        Ui.popView(Ui.SLIDE_UP);
+    }
+}
+
 class NestApi {
     static var sUserCode = "";
+    static var sProgressBar = new Ui.ProgressBar(sUserCode, null);
     hidden static var sDeviceCode = null;
 
     hidden static function responseCallback(responseCode, data) {
@@ -26,8 +36,8 @@ class NestApi {
             if (data.hasKey("user_code")) {
                 sDeviceCode = data['device_code'];
                 sUserCode = data['user_code'];
-                // TODO: request confirmation
-                Ui.requestUpdate();
+
+                sProgressBar.setDisplayString(sUserCode);
             }
             // If we have an access token, we can go on with our requests
             else if (data.hasKey("access_token")) {

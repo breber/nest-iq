@@ -46,6 +46,7 @@ class NestView extends Ui.View {
     }
 
     function drawHashMarks(dc, currentTemp) {
+        // Range 40 - 90
         var radius = dc.getWidth() / 2;
         var numTicks = 50;
         var tickInterval = (2 * Math.PI - (4 * Math.PI / 12)) / numTicks;
@@ -53,16 +54,25 @@ class NestView extends Ui.View {
         var cx = dc.getWidth() / 2;
         var cy = dc.getHeight() / 2;
         var lengthMultiplier = 7.0 / 8.0;
+        var longLengthMultiplier = 6.0 / 8.0;
         for (var i = 0; i < numTicks / 2; i++) {
             dc.setPenWidth(2);
+            var negativeMultiplier = lengthMultiplier;
+            var positiveMultiplier = lengthMultiplier;
+
+            if ((65 + i) == currentTemp) {
+                negativeMultiplier = longLengthMultiplier;
+            } else if ((65 - i) == currentTemp) {
+                positiveMultiplier = longLengthMultiplier;
+            }
 
             var dx = radius * Math.cos(Math.PI / 2 + tickInterval * i);
             var dy = radius * Math.sin(Math.PI / 2 + tickInterval * i);
-            dc.drawLine(cx - lengthMultiplier * dx, cy - lengthMultiplier * dy, cx - dx, cy - dy);
+            dc.drawLine(cx - negativeMultiplier * dx, cy - negativeMultiplier * dy, cx - dx, cy - dy);
 
             dx = radius * Math.cos(Math.PI / 2 - tickInterval * i);
             dy = radius * Math.sin(Math.PI / 2 - tickInterval * i);
-            dc.drawLine(cx - lengthMultiplier * dx, cy - lengthMultiplier * dy, cx - dx, cy - dy);
+            dc.drawLine(cx - positiveMultiplier * dx, cy - positiveMultiplier * dy, cx - dx, cy - dy);
         }
     }
 
@@ -91,10 +101,7 @@ class NestView extends Ui.View {
                     Gfx.FONT_SMALL, mode.toUpper() + " SET TO", Gfx.TEXT_JUSTIFY_CENTER);
             }
         } else {
-            // TODO: maybe put progress bar
-            dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
-            dc.drawText(width / 2, height / 2,
-                    Gfx.FONT_SMALL, NestApi.sUserCode, Gfx.TEXT_JUSTIFY_CENTER);
+            Ui.pushView(NestApi.sProgressBar, new PopViewDelegate(), Ui.SLIDE_DOWN);
         }
 
         // Draw the hash marks
