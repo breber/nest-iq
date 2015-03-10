@@ -4,27 +4,31 @@ using Toybox.WatchUi as Ui;
 
 class NestDelegate extends Ui.InputDelegate {
     function onKey(evt) {
-        var mode = NestApi.getHvacMode();
-
-        if ("off".equals(mode)) {
-            // If the system is off, don't handle any input
-            // TODO: maybe allow to turn on
-            return;
-        } else if (NestApi.isCurrentlyAway()) {
-            // If we are away, look for the ENTER key
-            if (evt.getKey() == Ui.KEY_ENTER) {
-                NestApi.setAwayStatus(false);
-            }
+        if (!NestApi.isAuthenticated()) {
+            NestApi.authenticate();
         } else {
-            // In any other case, look for:
-            //  -the enter key to enable away mode
-            //  -the up/down key to change target temperature
-            if (evt.getKey() == Ui.KEY_ENTER) {
-                NestApi.setAwayStatus(true);
-            } else if (evt.getKey() == Ui.KEY_UP) {
-                NestApi.setTargetTemperature(NestApi.getTargetTemp() + 1);
-            } else if (evt.getKey() == Ui.KEY_DOWN) {
-                NestApi.setTargetTemperature(NestApi.getTargetTemp() - 1);
+            var mode = NestApi.getHvacMode();
+
+            if ("off".equals(mode)) {
+                // If the system is off, don't handle any input
+                // TODO: maybe allow to turn on
+                return;
+            } else if (NestApi.isCurrentlyAway()) {
+                // If we are away, look for the ENTER key
+                if (evt.getKey() == Ui.KEY_ENTER) {
+                    NestApi.setAwayStatus(false);
+                }
+            } else {
+                // In any other case, look for:
+                //  -the enter key to enable away mode
+                //  -the up/down key to change target temperature
+                if (evt.getKey() == Ui.KEY_ENTER) {
+                    NestApi.setAwayStatus(true);
+                } else if (evt.getKey() == Ui.KEY_UP) {
+                    NestApi.setTargetTemperature(NestApi.getTargetTemp() + 1);
+                } else if (evt.getKey() == Ui.KEY_DOWN) {
+                    NestApi.setTargetTemperature(NestApi.getTargetTemp() - 1);
+                }
             }
         }
 
@@ -36,6 +40,9 @@ class NestView extends Ui.View {
 
     //! Restore the state of the app and prepare the view to be shown
     function onShow() {
+        if (!NestApi.isAuthenticated()) {
+            NestApi.authenticate();
+        }
     }
 
     function drawHashMarks(dc, currentTemp) {
@@ -67,20 +74,27 @@ class NestView extends Ui.View {
         var width = dc.getWidth();
         var height = dc.getHeight();
 
-        // Draw the text in the center of the circle
-        dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
-        var mode = NestApi.getHvacMode();
-        if ("off".equals(mode)) {
-            dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_LARGE) / 2,
-                Gfx.FONT_LARGE, "OFF", Gfx.TEXT_JUSTIFY_CENTER);
-        } else if (NestApi.isCurrentlyAway()) {
-            dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_LARGE) / 2,
-                Gfx.FONT_LARGE, "AWAY", Gfx.TEXT_JUSTIFY_CENTER);
+        if (NestApi.isAuthenticated()) {
+            // Draw the text in the center of the circle
+            dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
+            var mode = NestApi.getHvacMode();
+            if ("off".equals(mode)) {
+                dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_LARGE) / 2,
+                    Gfx.FONT_LARGE, "OFF", Gfx.TEXT_JUSTIFY_CENTER);
+            } else if (NestApi.isCurrentlyAway()) {
+                dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_LARGE) / 2,
+                    Gfx.FONT_LARGE, "AWAY", Gfx.TEXT_JUSTIFY_CENTER);
+            } else {
+                dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 4,
+                    Gfx.FONT_NUMBER_THAI_HOT, "" + NestApi.getTargetTemp(), Gfx.TEXT_JUSTIFY_CENTER);
+                dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 3,
+                    Gfx.FONT_SMALL, mode.toUpper() + " SET TO", Gfx.TEXT_JUSTIFY_CENTER);
+            }
         } else {
-            dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 4,
-                Gfx.FONT_NUMBER_THAI_HOT, "" + NestApi.getTargetTemp(), Gfx.TEXT_JUSTIFY_CENTER);
-            dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 3,
-                Gfx.FONT_SMALL, mode.toUpper() + " SET TO", Gfx.TEXT_JUSTIFY_CENTER);
+            // TODO: maybe put progress bar
+            dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
+            dc.drawText(width / 2, height / 2,
+                    Gfx.FONT_SMALL, NestApi.sUserCode, Gfx.TEXT_JUSTIFY_CENTER);
         }
 
         // Draw the hash marks
@@ -91,5 +105,4 @@ class NestView extends Ui.View {
     //! state of your app here.
     function onHide() {
     }
-
 }

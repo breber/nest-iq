@@ -53,6 +53,9 @@ class NestApi(remote.Service):
                      name='nest.usercode',
                      http_method='GET')
     def QueryUserCode(self, data):
+        # see https://developers.google.com/accounts/docs/OAuth2
+        # see https://developers.google.com/accounts/docs/OAuth2ForDevices
+
         import urllib
         from google.appengine.api import urlfetch
 
