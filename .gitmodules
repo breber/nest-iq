@@ -1,0 +1,3 @@
+[submodule "appengine/keys"]
+	path = appengine/keys
+	url = git@bitbucket.org:breber/nest-iq-keys.git

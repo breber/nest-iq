@@ -1,0 +1,21 @@
+application: nestiqapi
+version: main
+runtime: python27
+api_version: 1
+threadsafe: yes
+
+handlers:
+- url: /_ah/spi/.*
+  script: api.application
+
+libraries:
+- name: endpoints
+  version: latest
+- name: webapp2
+  version: latest
+
+builtins:
+- deferred: on
+
+inbound_services:
+- warmup

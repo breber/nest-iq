@@ -1,8 +1,10 @@
 using Toybox.Application as App;
 using Toybox.Communications as Comm;
+using Toybox.System as Sys;
 
 enum
 {
+    ACCESS_TOKEN,
     TARGET_TEMP,
     CURRENT_TEMP,
     IS_CURRENTLY_AWAY,
@@ -10,20 +12,18 @@ enum
 }
 
 class NestApi {
-    function initialize() {
-        Comm.setMailboxListener(method(:onMail));
+    static function responseCallback(responseCode, data) {
+        Sys.println("Response: (" + responseCode + ") " + data);
+
+        if (responseCode == 200) {
+            //if (data
+        }
     }
 
-    function onMail(mailIter) {
-        var mail = mailIter.next();
-
-        while (mail != null) {
-            // TODO: do something with the mail
-            mail = mailIter.next();
-        }
-
-        Comm.emptyMailbox();
-        Ui.requestUpdate();
+    static function getUserCode() {
+        Sys.println("getUserCode");
+        var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/usercode";
+        Comm.makeJsonRequest(url, {}, {}, responseCallback);
     }
 
     static function getTargetTemp() {
@@ -33,6 +33,8 @@ class NestApi {
     }
 
     static function getCurrentTemp() {
+        getUserCode();
+
         var app = App.getApp();
         var temp = app.getProperty(CURRENT_TEMP);
         return (temp == null) ? 0 : temp;
@@ -60,15 +62,5 @@ class NestApi {
     static function setAwayStatus(status) {
         var listener = new CommListener();
         Comm.transmit("awayStatus==" + status, null, listener);
-    }
-}
-
-class CommListener extends Comm.ConnectionListener {
-    function onComplete() {
-        Sys.println( "Transmit Complete" );
-    }
-
-    function onError() {
-        Sys.println( "Transmit Failed" );
     }
 }
