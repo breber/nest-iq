@@ -5,15 +5,10 @@ api_version: 1
 threadsafe: yes
 
 handlers:
-- url: /_ah/spi/.*
-  script: api.application
-
 - url: .*
   script: main.app
 
 libraries:
-- name: endpoints
-  version: latest
 - name: webapp2
   version: latest
 

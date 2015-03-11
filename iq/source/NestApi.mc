@@ -19,7 +19,7 @@ class KeyboardListener extends Ui.TextPickerDelegate {
 }
 
 function authenticate(code) {
-    var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/accesstoken/" + code;
+    var url = "http://nestiqapi.appspot.com/api/accesstoken/" + code;
     Sys.println(url);
     Comm.makeJsonRequest(url, {}, {}, method(:authenticateResponseCallback));
 }
@@ -34,7 +34,7 @@ function authenticateResponseCallback(responseCode, data) {
         if (data.hasKey("access_token")) {
             app.setProperty(ACCESS_TOKEN, data["access_token"]);
 
-            fetchUpdates();
+            NestApi.fetchUpdates();
         }
 
         Ui.requestUpdate();
@@ -44,7 +44,7 @@ function authenticateResponseCallback(responseCode, data) {
 function refreshData() {
     var app = App.getApp();
     var token = app.getProperty(ACCESS_TOKEN);
-    var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/status/" + token;
+    var url = "http://nestiqapi.appspot.com/api/status/" + token;
     Sys.println(url);
     Comm.makeJsonRequest(url, {}, {}, method(:refreshDataResponseCallback));
 }
@@ -73,6 +73,7 @@ class NestApi {
     static function isAuthenticated() {
         var app = App.getApp();
         var token = app.getProperty(ACCESS_TOKEN);
+        Sys.println("" + token);
         return (token != null);
     }
 
