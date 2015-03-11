@@ -14,42 +14,61 @@ enum
 
 class KeyboardListener extends Ui.TextPickerDelegate {
     function onTextEntered(text, changed) {
-        NestApi.authenticate(text);
+        authenticate(text);
+    }
+}
+
+function authenticate(code) {
+    var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/accesstoken/" + code;
+    Sys.println(url);
+    Comm.makeJsonRequest(url, {}, {}, method(:authenticateResponseCallback));
+}
+
+function authenticateResponseCallback(responseCode, data) {
+    Sys.println("Response: (" + responseCode + ") " + data);
+
+    if (responseCode == 200) {
+        var app = App.getApp();
+
+        // If we have an access token, we can go on with our requests
+        if (data.hasKey("access_token")) {
+            app.setProperty(ACCESS_TOKEN, data["access_token"]);
+
+            fetchUpdates();
+        }
+
+        Ui.requestUpdate();
+    }
+}
+
+function refreshData() {
+    var app = App.getApp();
+    var token = app.getProperty(ACCESS_TOKEN);
+    var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/status/" + token;
+    Sys.println(url);
+    Comm.makeJsonRequest(url, {}, {}, method(:refreshDataResponseCallback));
+}
+
+function refreshDataResponseCallback(responseCode, data) {
+    Sys.println("Response: (" + responseCode + ") " + data);
+
+    if (responseCode == 200) {
+        var app = App.getApp();
+
+        // If we have an hvac_mode, we are responding to an update
+        if (data.hasKey("hvac_mode")) {
+            app.setProperty(TARGET_TEMP, data.get("target_temp"));
+            app.setProperty(CURRENT_TEMP, data.get("current_temp"));
+            app.setProperty(IS_CURRENTLY_AWAY, data.get("away_status"));
+            app.setProperty(HVAC_MODE, data.get("hvac_mode"));
+        }
+
+        Ui.requestUpdate();
     }
 }
 
 class NestApi {
-    static var sTextInput = new Ui.TextPicker("Test");
-
-    hidden static function responseCallback(responseCode, data) {
-        Sys.println("Response: (" + responseCode + ") " + data);
-
-        if (responseCode == 200) {
-            var app = App.getApp();
-
-            // If we have an hvac_mode, we are responding to an update
-            if (data.hasKey("hvac_mode")) {
-                app.setProperty(TARGET_TEMP, data.get("target_temp"));
-                app.setProperty(CURRENT_TEMP, data.get("current_temp"));
-                app.setProperty(IS_CURRENTLY_AWAY, data.get("away_status"));
-                app.setProperty(HVAC_MODE, data.get("hvac_mode"));
-            }
-            // If we have an access token, we can go on with our requests
-            else if (data.hasKey("access_token")) {
-                app.setProperty(ACCESS_TOKEN, data['access_token']);
-
-                fetchUpdates();
-            }
-
-            Ui.requestUpdate();
-        }
-    }
-
-    static function authenticate(code) {
-        Sys.println("authenticate");
-        var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/accesstoken/" + code;
-        Comm.makeJsonRequest(url, {}, {}, responseCallback);
-    }
+    static var sTextInput = new Ui.TextPicker("");
 
     static function isAuthenticated() {
         var app = App.getApp();
@@ -58,11 +77,7 @@ class NestApi {
     }
 
     static function fetchUpdates() {
-        Sys.println("fetchUpdates");
-        var app = App.getApp();
-        var token = app.getProperty(ACCESS_TOKEN);
-        var url = "https://nestiqapi.appspot.com/_ah/api/nestiq/v1/nest/status/" + token;
-        Comm.makeJsonRequest(url, {}, {}, responseCallback);
+        refreshData();
     }
 
     static function getTargetTemp() {
