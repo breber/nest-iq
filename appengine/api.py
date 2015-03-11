@@ -1,32 +1,30 @@
 from endpoints_proto_datastore.ndb import EndpointsModel
+from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
+from keys import keys
 from protorpc import remote
 import endpoints
 import json
-import keys
 import logging
 
 AUDIENCES = []
 ALLOWED_CLIENT_IDS = [keys.APPENGINE_CLIENT_ID, endpoints.API_EXPLORER_CLIENT_ID]
 
-class NestStatus(EndpointsModel):
-    _message_fields_schema = ('status',)
-
-    status = ndb.StringProperty()
-
-class UserCode(EndpointsModel):
-    _message_fields_schema = ('user_code', 'verification_url', 'device_code')
-
-    user_code = ndb.StringProperty()
-    verification_url = ndb.StringProperty()
-    device_code = ndb.StringProperty()
-
 class AccessToken(EndpointsModel):
-    _message_fields_schema = ('device_id', 'access_token', 'expires_in')
+    _message_fields_schema = ('auth_code', 'access_token', 'expires_in')
 
-    device_id = ndb.StringProperty()
+    auth_code = ndb.StringProperty()
     access_token = ndb.StringProperty()
     expires_in = ndb.IntegerProperty()
+
+class NestStatus(EndpointsModel):
+    _message_fields_schema = ('access_token', 'target_temp', 'current_temp', 'away_status', 'hvac_mode')
+
+    access_token = ndb.StringProperty()
+    target_temp = ndb.IntegerProperty()
+    current_temp = ndb.IntegerProperty()
+    away_status = ndb.BooleanProperty()
+    hvac_mode = ndb.StringProperty()
 
 @endpoints.api(name='nestiq',
                version='v1',
@@ -35,73 +33,51 @@ class AccessToken(EndpointsModel):
                audiences=AUDIENCES,
                allowed_client_ids=ALLOWED_CLIENT_IDS)
 class NestApi(remote.Service):
-    @NestStatus.method(user_required=True,
-                       path='nest/status',
+    @NestStatus.method(path='nest/status/{access_token}',
                        name='nest.status',
-                       http_method='GET')
+                       http_method='GET',
+                       request_fields=('access_token',))
     def QueryNestStatus(self, query):
-        user = endpoints.get_current_user()
+        status = NestStatus()
+        status.access_token = query.access_token
 
-        if user:
-            status = NestStatus()
-            status.status = 'good!'
-            return status
-        else:
-            raise endpoints.UnauthorizedException('Unknown user.')
-
-    @UserCode.method(path='nest/usercode',
-                     name='nest.usercode',
-                     http_method='GET')
-    def QueryUserCode(self, data):
-        # see https://developers.google.com/accounts/docs/OAuth2
-        # see https://developers.google.com/accounts/docs/OAuth2ForDevices
-
-        import urllib
-        from google.appengine.api import urlfetch
-
-        form_fields = {
-          "client_id": keys.APPENGINE_CLIENT_ID,
-          "scope": "email profile"
-        }
-        form_data = urllib.urlencode(form_fields)
-
-        url = 'https://accounts.google.com/o/oauth2/device/code'
-        result = urlfetch.fetch(url=url,
-            payload=form_data,
-            method=urlfetch.POST,
-            headers={'Content-Type': 'application/x-www-form-urlencoded'})
+        url = "https://developer-api.nest.com/?auth=%s" % query.access_token
+        result = urlfetch.fetch(url)
 
         logging.warn(result.status_code)
         logging.warn(result.content)
 
+        # Parse the result as json
         response_data = json.loads(result.content)
 
-        user_code = UserCode()
-        user_code.user_code = response_data['user_code']
-        user_code.verification_url = response_data['verification_url']
-        user_code.device_code = response_data['device_code']
+        # Get a list of all the structures
+        structures_json = response_data['structures']
+        structure_names = [p for p in structures_json]
 
-        return user_code
+        # Just use the first structure
+        structure = structures_json[structure_names[0]]
 
-    @AccessToken.method(path='nest/accesstoken/{device_id}',
+        # Find all the devices
+        devices = response_data['devices']
+
+        # Get the thermostat corresponding to the first thermostat
+        # in the structures list
+        thermostat = devices['thermostats'][structure['thermostats'][0]]
+
+        status.target_temp = thermostat['target_temperature_f']
+        status.current_temp = thermostat['ambient_temperature_f']
+        status.hvac_mode = thermostat['hvac_mode']
+        status.away_status = not 'home' == structure['away']
+
+        return status
+
+    @AccessToken.method(path='nest/accesstoken/{auth_code}',
                         name='nest.accesstoken',
                         http_method='GET',
-                        request_fields=('device_id',))
+                        request_fields=('auth_code',))
     def QueryAccessToken(self, data):
-        import urllib
-        from google.appengine.api import urlfetch
-
-        form_fields = {
-          "client_id": keys.APPENGINE_CLIENT_ID,
-          "client_secret": keys.APPENGINE_SECRET,
-          "grant_type": "http://oauth.net/grant_type/device/1.0",
-          "code": data.device_id
-        }
-        form_data = urllib.urlencode(form_fields)
-
-        url = 'https://www.googleapis.com/oauth2/v3/token'
+        url = 'https://api.home.nest.com/oauth2/access_token?client_id=%s&code=%s&client_secret=%s&grant_type=authorization_code' % (keys.NEST_CLIENT_ID, data.auth_code, keys.NEST_CLIENT_SECRET)
         result = urlfetch.fetch(url=url,
-            payload=form_data,
             method=urlfetch.POST,
             headers={'Content-Type': 'application/x-www-form-urlencoded'})
 
@@ -111,7 +87,6 @@ class NestApi(remote.Service):
         response_data = json.loads(result.content)
 
         token = AccessToken()
-        token.device_id = data.device_id
         if 'error' in response_data:
             token.expires_in = 0
             token.access_token = response_data['error']
