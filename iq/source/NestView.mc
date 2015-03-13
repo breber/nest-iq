@@ -4,27 +4,27 @@ using Toybox.WatchUi as Ui;
 
 class NestDelegate extends Ui.InputDelegate {
     function onKey(evt) {
-        var mode = NestApi.getHvacMode();
+        var mode = nestApi.getHvacMode();
 
         if ("off".equals(mode)) {
             // If the system is off, don't handle any input
             // TODO: maybe allow to turn on
             return;
-        } else if (NestApi.isCurrentlyAway()) {
+        } else if (nestApi.isCurrentlyAway()) {
             // If we are away, look for the ENTER key
             if (evt.getKey() == Ui.KEY_ENTER) {
-                NestApi.setAwayStatus(false);
+                nestApi.setAwayStatus(false);
             }
         } else {
             // In any other case, look for:
             //  -the enter key to enable away mode
             //  -the up/down key to change target temperature
             if (evt.getKey() == Ui.KEY_ENTER) {
-                NestApi.setAwayStatus(true);
+                nestApi.setAwayStatus(true);
             } else if (evt.getKey() == Ui.KEY_UP) {
-                NestApi.setTargetTemperature(NestApi.getTargetTemp() + 1);
+                nestApi.setTargetTemperature(nestApi.getTargetTemp() + 1);
             } else if (evt.getKey() == Ui.KEY_DOWN) {
-                NestApi.setTargetTemperature(NestApi.getTargetTemp() - 1);
+                nestApi.setTargetTemperature(nestApi.getTargetTemp() - 1);
             }
         }
 
@@ -36,9 +36,8 @@ class NestView extends Ui.View {
 
     //! Restore the state of the app and prepare the view to be shown
     function onShow() {
-        Sys.println("onShow");
-        if (NestApi.isAuthenticated()) {
-            NestApi.fetchUpdates();
+        if (nestApi.isAuthenticated()) {
+            nestApi.fetchUpdates();
         }
     }
 
@@ -75,7 +74,7 @@ class NestView extends Ui.View {
 
     //! Update the view
     function onUpdate(dc) {
-        if (NestApi.isAuthenticated()) {
+        if (nestApi.isAuthenticated()) {
             var width = dc.getWidth();
             var height = dc.getHeight();
 
@@ -84,22 +83,22 @@ class NestView extends Ui.View {
 
             // Draw the text in the center of the circle
             dc.setColor(Gfx.COLOR_WHITE, Gfx.COLOR_BLACK);
-            var mode = NestApi.getHvacMode();
+            var mode = nestApi.getHvacMode();
             if ("off".equals(mode)) {
                 dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_LARGE) / 2,
                     Gfx.FONT_LARGE, "OFF", Gfx.TEXT_JUSTIFY_CENTER);
-            } else if (NestApi.isCurrentlyAway()) {
+            } else if (nestApi.isCurrentlyAway()) {
                 dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_LARGE) / 2,
                     Gfx.FONT_LARGE, "AWAY", Gfx.TEXT_JUSTIFY_CENTER);
             } else {
                 dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 4,
-                    Gfx.FONT_NUMBER_THAI_HOT, "" + NestApi.getTargetTemp(), Gfx.TEXT_JUSTIFY_CENTER);
+                    Gfx.FONT_NUMBER_THAI_HOT, "" + nestApi.getTargetTemp(), Gfx.TEXT_JUSTIFY_CENTER);
                 dc.drawText(width / 2, height / 2 - dc.getFontHeight(Gfx.FONT_NUMBER_THAI_HOT) / 3,
                     Gfx.FONT_SMALL, mode.toUpper() + " SET TO", Gfx.TEXT_JUSTIFY_CENTER);
             }
 
             // Draw the hash marks
-            drawHashMarks(dc, NestApi.getCurrentTemp());
+            drawHashMarks(dc, nestApi.getCurrentTemp());
         } else {
             Ui.pushView(NestApi.sTextInput, new KeyboardListener(), Ui.SLIDE_DOWN);
         }

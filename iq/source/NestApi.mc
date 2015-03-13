@@ -14,18 +14,76 @@ enum
     HVAC_MODE
 }
 
+var nestApi = new NestApi();
+
 class KeyboardListener extends Ui.TextPickerDelegate {
     function onTextEntered(text, changed) {
-        var requests = new WebRequests();
-        requests.authenticate(text);
+        var url = BASE_URL + "/api/accesstoken/" + code;
+        Comm.makeJsonRequest(url, {}, {}, nestApi.method(:authenticateResponseCallback));
     }
 }
 
 const BASE_URL = "http://nestiqapi.appspot.com";
-class WebRequests {
-    function authenticate(code) {
-        var url = BASE_URL + "/api/accesstoken/" + code;
-        Comm.makeJsonRequest(url, {}, {}, method(:authenticateResponseCallback));
+
+class NestApi {
+    static var sTextInput = new Ui.TextPicker("");
+
+    function isAuthenticated() {
+        var app = App.getApp();
+        var token = app.getProperty(ACCESS_TOKEN);
+        return (token != null);
+    }
+
+    function fetchUpdates() {
+        var app = App.getApp();
+        var token = app.getProperty(ACCESS_TOKEN);
+        var url = BASE_URL + "/api/status/" + token;
+        Sys.println(url);
+        Comm.makeJsonRequest(url, {}, {}, method(:refreshDataResponseCallback));
+    }
+
+    function getTargetTemp() {
+        var app = App.getApp();
+        var temp = app.getProperty(TARGET_TEMP);
+        return (temp == null) ? 0 : temp;
+    }
+
+    function getCurrentTemp() {
+        var app = App.getApp();
+        var temp = app.getProperty(CURRENT_TEMP);
+        return (temp == null) ? 0 : temp;
+    }
+
+    function isCurrentlyAway() {
+        var app = App.getApp();
+        var away = app.getProperty(IS_CURRENTLY_AWAY);
+        return (away == null) ? false : away;
+    }
+
+    function getHvacMode() {
+        var app = App.getApp();
+        var mode = app.getProperty(HVAC_MODE);
+        return (mode == null) ? "heat" : mode;
+    }
+
+    function setTargetTemperature(target) {
+        if ((target > 50) && (target < 90)) {
+            var app = App.getApp();
+            var token = app.getProperty(ACCESS_TOKEN);
+            var thermostat = app.getProperty(THERMOSTAT);
+            var url = BASE_URL + "/api/target/set/" + token + "/" + thermostat + "/" + target;
+            Sys.println(url);
+            Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
+        }
+    }
+
+    function setAwayStatus(status) {
+        var awayStatus = "away";
+        if (!status) {
+            awayStatus = "home";
+        }
+        var url = BASE_URL + "/api/away/set/" + awayStatus;
+        Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
     }
 
     function authenticateResponseCallback(responseCode, data) {
@@ -38,19 +96,11 @@ class WebRequests {
             if (data.hasKey("access_token")) {
                 app.setProperty(ACCESS_TOKEN, data["access_token"]);
 
-                NestApi.fetchUpdates();
+                fetchUpdates();
             }
 
             Ui.requestUpdate();
         }
-    }
-
-    function refreshData() {
-        var app = App.getApp();
-        var token = app.getProperty(ACCESS_TOKEN);
-        var url = BASE_URL + "/api/status/" + token;
-        Sys.println(url);
-        Comm.makeJsonRequest(url, {}, {}, method(:refreshDataResponseCallback));
     }
 
     function refreshDataResponseCallback(responseCode, data) {
@@ -73,24 +123,6 @@ class WebRequests {
         }
     }
 
-    function setTargetTemperature(target) {
-        var app = App.getApp();
-        var token = app.getProperty(ACCESS_TOKEN);
-        var thermostat = app.getProperty(THERMOSTAT);
-        var url = BASE_URL + "/api/target/set/" + token + "/" + thermostat + "/" + target;
-        Sys.println(url);
-        Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
-    }
-
-    function setAwayStatus(status) {
-        var awayStatus = "away";
-        if (!status) {
-            awayStatus = "home";
-        }
-        var url = BASE_URL + "/api/away/set/" + awayStatus;
-        Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
-    }
-
     function updateDataResponseCallback(responseCode, data) {
         Sys.println("Update Response: (" + responseCode + ") " + data);
 
@@ -109,56 +141,5 @@ class WebRequests {
 
             Ui.requestUpdate();
         }
-    }
-}
-
-class NestApi {
-    static var sTextInput = new Ui.TextPicker("");
-
-    static function isAuthenticated() {
-        var app = App.getApp();
-        var token = app.getProperty(ACCESS_TOKEN);
-        return (token != null);
-    }
-
-    static function fetchUpdates() {
-        var requests = new WebRequests();
-        requests.refreshData();
-    }
-
-    static function getTargetTemp() {
-        var app = App.getApp();
-        var temp = app.getProperty(TARGET_TEMP);
-        return (temp == null) ? 0 : temp;
-    }
-
-    static function getCurrentTemp() {
-        var app = App.getApp();
-        var temp = app.getProperty(CURRENT_TEMP);
-        return (temp == null) ? 0 : temp;
-    }
-
-    static function isCurrentlyAway() {
-        var app = App.getApp();
-        var away = app.getProperty(IS_CURRENTLY_AWAY);
-        return (away == null) ? false : away;
-    }
-
-    static function getHvacMode() {
-        var app = App.getApp();
-        var mode = app.getProperty(HVAC_MODE);
-        return (mode == null) ? "heat" : mode;
-    }
-
-    static function setTargetTemperature(target) {
-        if ((target > 50) && (target < 90)) {
-            var requests = new WebRequests();
-            requests.setTargetTemperature(target);
-        }
-    }
-
-    static function setAwayStatus(status) {
-        var requests = new WebRequests();
-        requests.setAwayStatus(status);
     }
 }
