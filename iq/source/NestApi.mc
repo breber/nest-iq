@@ -3,6 +3,8 @@ using Toybox.Communications as Comm;
 using Toybox.System as Sys;
 using Toybox.WatchUi as Ui;
 
+const BASE_URL = "http://nestiqapi.appspot.com";
+
 enum
 {
     ACCESS_TOKEN,
@@ -18,12 +20,10 @@ var nestApi = new NestApi();
 
 class KeyboardListener extends Ui.TextPickerDelegate {
     function onTextEntered(text, changed) {
-        var url = BASE_URL + "/api/accesstoken/" + code;
+        var url = BASE_URL + "/api/accesstoken/" + text;
         Comm.makeJsonRequest(url, {}, {}, nestApi.method(:authenticateResponseCallback));
     }
 }
-
-const BASE_URL = "http://nestiqapi.appspot.com";
 
 class NestApi {
     static var sTextInput = new Ui.TextPicker("");
@@ -82,7 +82,12 @@ class NestApi {
         if (!status) {
             awayStatus = "home";
         }
-        var url = BASE_URL + "/api/away/set/" + awayStatus;
+
+        var app = App.getApp();
+        var token = app.getProperty(ACCESS_TOKEN);
+        var structure = app.getProperty(STRUCTURE);
+        var url = BASE_URL + "/api/away/set/" + token + "/" + structure + "/" + awayStatus;
+        Sys.println(url);
         Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
     }
 

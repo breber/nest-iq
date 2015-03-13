@@ -63,6 +63,7 @@ class NestStatusHandler(webapp2.RequestHandler):
             thermostat = devices['thermostats'][structure['thermostats'][0]]
 
             status['thermostat'] = structure['thermostats'][0]
+            status['structure'] = structure_names[0]
             status['target_temp'] = thermostat['target_temperature_f']
             status['current_temp'] = thermostat['ambient_temperature_f']
             status['hvac_mode'] = thermostat['hvac_mode']
@@ -105,13 +106,14 @@ class NestTargetTemperatureSetHandler(webapp2.RequestHandler):
             'val': target_temp
         }
 
+        self.response.headerlist = [('Content-type', 'application/json')]
         self.response.out.write(json.dumps(status))
 
 class NestAwaySetHandler(webapp2.RequestHandler):
     def get(self, access_token, structure_id, away):
         # See https://developer.nest.com/documentation/api-reference
-        url = "https://developer-api.nest.com/structures/%s/away?auth=%s" % (structure_id, access_token)
-        request = urllib2.Request(url, data='%s' % away)
+        url = "https://developer-api.nest.com/structures/%s?auth=%s" % (structure_id, access_token)
+        request = urllib2.Request(url, data='{"away": "%s"}' % away)
         request.add_header('Content-Type', 'application/json')
         request.get_method = lambda: 'PUT'
 
@@ -126,6 +128,7 @@ class NestAwaySetHandler(webapp2.RequestHandler):
             'val': away
         }
 
+        self.response.headerlist = [('Content-type', 'application/json')]
         self.response.out.write(json.dumps(status))
 
 app = webapp2.WSGIApplication([
