@@ -8,6 +8,42 @@ import webapp2
 # https://developer.nest.com/documentation/cloud/api-overview/
 # https://developer.nest.com/documentation/cloud/rest-guide
 
+def get_nest_status(access_token):
+    # See https://developer.nest.com/documentation/api-reference
+    url = "https://developer-api.nest.com/?auth=%s" % access_token
+    result = urlfetch.fetch(url)
+
+    logging.warn(result.status_code)
+    logging.warn(result.content)
+
+    status = {}
+    if result.status_code == 200:
+        # Parse the result as json
+        response_data = json.loads(result.content)
+
+        # Get a list of all the structures
+        structures_json = response_data['structures']
+        structure_names = [p for p in structures_json]
+
+        # Just use the first structure
+        structure = structures_json[structure_names[0]]
+
+        # Find all the devices
+        devices = response_data['devices']
+
+        # Get the thermostat corresponding to the first thermostat
+        # in the structures list
+        thermostat = devices['thermostats'][structure['thermostats'][0]]
+
+        status['thermostat'] = structure['thermostats'][0]
+        status['structure'] = structure_names[0]
+        status['target_temp'] = thermostat['target_temperature_f']
+        status['current_temp'] = thermostat['ambient_temperature_f']
+        status['hvac_mode'] = thermostat['hvac_mode']
+        status['away_status'] = structure['away']
+
+    return status
+
 class RedirectAuth(webapp2.RequestHandler):
     def get(self):
         self.redirect("https://home.nest.com/login/oauth2?client_id=%s&state=STATE" % keys.NEST_CLIENT_ID)
@@ -36,42 +72,10 @@ class AccessTokenHandler(webapp2.RequestHandler):
 
 class NestStatusHandler(webapp2.RequestHandler):
     def get(self, access_token):
-        # See https://developer.nest.com/documentation/api-reference
-        url = "https://developer-api.nest.com/?auth=%s" % access_token
-        result = urlfetch.fetch(url)
-
-        logging.warn(result.status_code)
-        logging.warn(result.content)
-
-        status = {}
-        if result.status_code == 200:
-            # Parse the result as json
-            response_data = json.loads(result.content)
-
-            # Get a list of all the structures
-            structures_json = response_data['structures']
-            structure_names = [p for p in structures_json]
-
-            # Just use the first structure
-            structure = structures_json[structure_names[0]]
-
-            # Find all the devices
-            devices = response_data['devices']
-
-            # Get the thermostat corresponding to the first thermostat
-            # in the structures list
-            thermostat = devices['thermostats'][structure['thermostats'][0]]
-
-            status['thermostat'] = structure['thermostats'][0]
-            status['structure'] = structure_names[0]
-            status['target_temp'] = thermostat['target_temperature_f']
-            status['current_temp'] = thermostat['ambient_temperature_f']
-            status['hvac_mode'] = thermostat['hvac_mode']
-            status['away_status'] = not 'home' == structure['away']
+        status = get_nest_status(access_token)
 
         self.response.headerlist = [('Content-type', 'application/json')]
         self.response.out.write(json.dumps(status))
-
 
 class SmartRedirectHandler(urllib2.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, hdrs, newurl):
@@ -100,11 +104,8 @@ class NestTargetTemperatureSetHandler(webapp2.RequestHandler):
 
         logging.warn(result.getcode())
 
-        status = {
-            'status': result.getcode(),
-            'req': 'temp',
-            'val': target_temp
-        }
+        # send the full status back
+        status = get_nest_status(access_token)
 
         self.response.headerlist = [('Content-type', 'application/json')]
         self.response.out.write(json.dumps(status))
@@ -122,11 +123,8 @@ class NestAwaySetHandler(webapp2.RequestHandler):
 
         logging.warn(result.getcode())
 
-        status = {
-            'status': result.getcode(),
-            'req': 'away',
-            'val': away
-        }
+        # send the full status back
+        status = get_nest_status(access_token)
 
         self.response.headerlist = [('Content-type', 'application/json')]
         self.response.out.write(json.dumps(status))

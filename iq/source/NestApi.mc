@@ -57,7 +57,7 @@ class NestApi {
     function isCurrentlyAway() {
         var app = App.getApp();
         var away = app.getProperty(IS_CURRENTLY_AWAY);
-        return (away == null) ? false : away;
+        return (away == null) ? false : "away".equals(away);
     }
 
     function getHvacMode() {
@@ -73,7 +73,7 @@ class NestApi {
             var thermostat = app.getProperty(THERMOSTAT);
             var url = BASE_URL + "/api/target/set/" + token + "/" + thermostat + "/" + target;
             Sys.println(url);
-            Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
+            Comm.makeJsonRequest(url, {}, {}, method(:refreshDataResponseCallback));
         }
     }
 
@@ -88,7 +88,7 @@ class NestApi {
         var structure = app.getProperty(STRUCTURE);
         var url = BASE_URL + "/api/away/set/" + token + "/" + structure + "/" + awayStatus;
         Sys.println(url);
-        Comm.makeJsonRequest(url, {}, {}, method(:updateDataResponseCallback));
+        Comm.makeJsonRequest(url, {}, {}, method(:refreshDataResponseCallback));
     }
 
     function authenticateResponseCallback(responseCode, data) {
@@ -122,26 +122,6 @@ class NestApi {
                 app.setProperty(CURRENT_TEMP, data.get("current_temp"));
                 app.setProperty(IS_CURRENTLY_AWAY, data.get("away_status"));
                 app.setProperty(HVAC_MODE, data.get("hvac_mode"));
-            }
-
-            Ui.requestUpdate();
-        }
-    }
-
-    function updateDataResponseCallback(responseCode, data) {
-        Sys.println("Update Response: (" + responseCode + ") " + data);
-
-        if ((responseCode == 200) &&
-            data.hasKey("status") &&
-            (data.get("status") == 200))
-        {
-            var app = App.getApp();
-            var initialReq = data.get("req");
-
-            if ("temp".equals(initialReq)) {
-                app.setProperty(TARGET_TEMP, data.get("val"));
-            } else if ("away".equals(initialReq)) {
-                app.setProperty(IS_CURRENTLY_AWAY, data.get("val"));
             }
 
             Ui.requestUpdate();
